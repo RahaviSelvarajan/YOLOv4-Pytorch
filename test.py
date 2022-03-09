@@ -13,7 +13,7 @@ from tqdm import tqdm
 from models.experimental import attempt_load
 from utils.datasets import create_dataloader
 from utils.general import (
-    coco80_to_coco91_class, check_file, check_img_size, compute_loss, non_max_suppression,
+    sleepaid_class, check_file, check_img_size, compute_loss, non_max_suppression,
     scale_coords, xyxy2xywh, clip_coords, plot_images, xywh2xyxy, box_iou, output_to_target, ap_per_class)
 from utils.torch_utils import select_device, time_synchronized
 
@@ -78,12 +78,12 @@ def test(data,
 
     seen = 0
     names = model.names if hasattr(model, 'names') else model.module.names
-    coco91class = coco80_to_coco91_class()
+    classes = sleepaid_class()
     s = ('%20s' + '%12s' * 6) % ('Class', 'Images', 'Targets', 'P', 'R', 'mAP@.5', 'mAP@.5:.95')
     p, r, f1, mp, mr, map50, map, t0, t1 = 0., 0., 0., 0., 0., 0., 0., 0., 0.
     loss = torch.zeros(3, device=device)
     jdict, stats, ap, ap_class = [], [], [], []
-    #model = model.to(memory_format=torch.channels_last)
+    # model = model.to(memory_format=torch.channels_last)
     for batch_i, (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s)):
         img = img.to(device, non_blocking=True)
         img = img.half() if half else img.float()  # uint8 to fp16/32
@@ -144,7 +144,7 @@ def test(data,
                 box[:, :2] -= box[:, 2:] / 2  # xy center to top-left corner
                 for p, b in zip(pred.tolist(), box.tolist()):
                     jdict.append({'image_id': int(image_id) if image_id.isnumeric() else image_id,
-                                  'category_id': coco91class[int(p[5])],
+                                  'category_id': classes[int(p[5])],
                                   'bbox': [round(x, 3) for x in b],
                                   'score': round(p[4], 5)})
 
@@ -261,7 +261,7 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', action='store_true', help='report mAP by class')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
     opt = parser.parse_args()
-    opt.save_json |= opt.data.endswith('coco.yaml')
+    opt.save_json |= opt.data.endswith('sleepaid.yaml')
     opt.data = check_file(opt.data)  # check file
     print(opt)
 
