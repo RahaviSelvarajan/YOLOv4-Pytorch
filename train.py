@@ -16,7 +16,7 @@ from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from pytorchtools import EarlyStopping
+# from pytorchtools import EarlyStopping
 
 import test  # import test.py to get mAP after each epoch
 from models.yolo import Model
