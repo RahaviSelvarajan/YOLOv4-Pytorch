@@ -1,0 +1,14 @@
+# train and val datasets (image directory or *.txt file with image paths)
+train: /content/ScaledYOLOv4/
+val: 
+
+# number of classes
+nc: 24
+
+# class names
+names: ['B-Left_recovery', 'B-Left_lateral', 'B-Left_tilt', 'B-Supine', 'B-Supine_thorax_with_Left_pelvic_tilt', 
+'B-Supine_thorax_with_Right_pelvic_tilt', 'B-Supine_pelvis_with_Left_thorax_tilt', 
+'B-Supine_pelvis_with_Right_thorax_tilt', 'B-Right_tilt', 'B-Right_lateral', 'B-Right_recovery', 'B-Sitting', 
+'N_B-Left_recovery', 'N_B-Left_lateral', 'N_B-Left_tilt', 'N_B-Supine', 'N_B-Supine_thorax_with_Left_pelvic_tilt', 
+'N_B-Supine_thorax_with_Right_pelvic_tilt', 'N_B-Supine_pelvis_with_Left_thorax_tilt', 
+'N_B-Supine_pelvis_with_Right_thorax_tilt', 'N_B-Right_tilt', 'N_B-Right_lateral', 'N_B-Right_recovery', 'N_B-Sitting']
