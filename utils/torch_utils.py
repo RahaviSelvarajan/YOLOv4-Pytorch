@@ -9,9 +9,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 
-from utils.general import LOGGER
-
-
 def init_seeds(seed=0):
     torch.manual_seed(seed)
 
