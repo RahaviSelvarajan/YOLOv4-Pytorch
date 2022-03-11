@@ -146,7 +146,7 @@ def train(hyp, opt, device, tb_writer=None):
 
     # Trainloader
     dataloader, dataset = create_dataloader(train_path, imgsz, batch_size, gs, opt, hyp=hyp, augment=True,
-                                            cache=opt.cache_images, rect=opt.rect, local_rank=rank,
+                                            cache=False, rect=opt.rect, local_rank=rank,
                                             world_size=opt.world_size)
     mlc = np.concatenate(dataset.labels, 0)[:, 0].max()  # max label class
     nb = len(dataloader)  # number of batches
@@ -157,7 +157,7 @@ def train(hyp, opt, device, tb_writer=None):
         ema.updates = start_epoch * nb // accumulate  # set EMA updates ***
         # local_rank is set to -1. Because only the first process is expected to do evaluation.
         testloader = create_dataloader(test_path, imgsz_test, batch_size, gs, opt, hyp=hyp, augment=False,
-                                       cache=opt.cache_images, rect=True, local_rank=-1, world_size=opt.world_size)[0]
+                                       cache=False, rect=True, local_rank=-1, world_size=opt.world_size)[0]
 
     # Model parameters
     hyp['cls'] *= nc / 80.  # scale coco-tuned hyp['cls'] to current dataset
