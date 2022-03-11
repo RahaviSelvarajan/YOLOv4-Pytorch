@@ -11,6 +11,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 import torch.utils.data
+import torch.nn as nn
 import yaml
 from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -39,7 +40,6 @@ def train(hyp, opt, device, tb_writer=None):
     epochs, batch_size, total_batch_size, weights, rank = \
         opt.epochs, opt.batch_size, opt.total_batch_size, opt.weights, opt.global_rank
 
-    # TODO: Use DDP logging. Only the first process is allowed to log.
     # Save run settings
     with open(log_dir / 'hyp.yaml', 'w') as f:
         yaml.dump(hyp, f, sort_keys=False)
@@ -128,8 +128,7 @@ def train(hyp, opt, device, tb_writer=None):
     imgsz, imgsz_test = [check_img_size(x, gs) for x in opt.img_size]  # verify imgsz are gs-multiples
 
     # DP mode
-    if cuda and rank == -1 and torch.cuda.device_count() > 1:
-        model = torch.nn.DataParallel(model)
+    model = torch.nn.DataParallel(model)
 
     # SyncBatchNorm
     if opt.sync_bn and cuda and rank != -1:
@@ -140,8 +139,8 @@ def train(hyp, opt, device, tb_writer=None):
     ema = ModelEMA(model) if rank in [-1, 0] else None
 
     # DDP mode
-    if cuda and rank != -1:
-        model = DDP(model, device_ids=[opt.local_rank], output_device=(opt.local_rank))
+    # if cuda:
+    #     model = nn.DataParallel(model, device_ids=[opt.local_rank], output_device=(opt.local_rank))
 
     # Trainloader
     dataloader, dataset = create_dataloader(train_path, imgsz, batch_size, gs, opt, hyp=hyp, augment=True,
@@ -206,13 +205,13 @@ def train(hyp, opt, device, tb_writer=None):
                 dataset.indices = random.choices(range(dataset.n), weights=image_weights,
                                                  k=dataset.n)  # rand weighted idx
             # Broadcast if DDP
-            if rank != -1:
-                indices = torch.zeros([dataset.n], dtype=torch.int)
-                if rank == 0:
-                    indices[:] = torch.from_tensor(dataset.indices, dtype=torch.int)
-                dist.broadcast(indices, 0)
-                if rank != 0:
-                    dataset.indices = indices.cpu().numpy()
+            # if rank != -1:
+            #     indices = torch.zeros([dataset.n], dtype=torch.int)
+            #     if rank == 0:
+            #         indices[:] = torch.from_tensor(dataset.indices, dtype=torch.int)
+            #     dist.broadcast(indices, 0)
+            #     if rank != 0:
+            #         dataset.indices = indices.cpu().numpy()
 
         # Update mosaic border
         # b = int(random.uniform(0.25 * imgsz, 0.75 * imgsz + gs) // gs * gs)
@@ -257,8 +256,8 @@ def train(hyp, opt, device, tb_writer=None):
 
                 # Loss
                 loss, loss_items = compute_loss(pred, targets.to(device), model)  # scaled by batch_size
-                if rank != -1:
-                    loss *= opt.world_size  # gradient averaged between devices in DDP mode
+                # if rank != -1:
+                #     loss *= opt.world_size  # gradient averaged between devices in DDP mode
                 # if not torch.isfinite(loss):
                 #     print('WARNING: non-finite loss, ending training ', loss_items)
                 #     return results
@@ -397,7 +396,7 @@ if __name__ == '__main__':
     parser.add_argument('--multi-scale', action='store_true', help='vary img-size +/- 50%%')
     parser.add_argument('--single-cls', action='store_true', help='train as single-class dataset')
     parser.add_argument('--adam', action='store_true', help='use torch.optim.Adam() optimizer')
-    parser.add_argument('--sync-bn', action='store_true', help='use SyncBatchNorm, only available in DDP mode')
+    parser.add_argument('--sync-bn', action='store_false', help='use SyncBatchNorm, only available in DDP mode')
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter, do not modify')
     parser.add_argument('--patience', type=int, default=10, help='EarlyStopping patience (epochs without improvement)')
     parser.add_argument('--logdir', type=str, default='runs/', help='logging directory')
@@ -423,15 +422,15 @@ if __name__ == '__main__':
     opt.global_rank = -1
 
     # DDP mode
-    if opt.local_rank != -1:
-        assert torch.cuda.device_count() > opt.local_rank
-        torch.cuda.set_device(opt.local_rank)
-        device = torch.device('cuda', opt.local_rank)
-        dist.init_process_group(backend='nccl', init_method='env://', rank=opt.local_rank, world_size=1)  # distributed backend
-        opt.world_size = dist.get_world_size()
-        opt.global_rank = dist.get_rank()
-        assert opt.batch_size % opt.world_size == 0, '--batch-size must be multiple of CUDA device count'
-        opt.batch_size = opt.total_batch_size // opt.world_size
+    # if opt.local_rank != -1:
+    #     assert torch.cuda.device_count() > opt.local_rank
+    #     torch.cuda.set_device(opt.local_rank)
+    #     device = torch.device('cuda', opt.local_rank)
+    #     dist.init_process_group(backend='nccl', init_method='env://')  # distributed backend
+    #     opt.world_size = dist.get_world_size()
+    #     opt.global_rank = dist.get_rank()
+    #     assert opt.batch_size % opt.world_size == 0, '--batch-size must be multiple of CUDA device count'
+    #     opt.batch_size = opt.total_batch_size // opt.world_size
 
     print(opt)
     with open(opt.hyp) as f:
