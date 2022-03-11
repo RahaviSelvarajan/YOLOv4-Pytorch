@@ -240,9 +240,4 @@ class EarlyStopping:
         delta = epoch - self.best_epoch  # epochs without improvement
         self.possible_stop = delta >= (self.patience - 1)  # possible stop may occur next epoch
         stop = delta >= self.patience  # stop training if patience exceeded
-        if stop:
-            LOGGER.info(f'Stopping training early as no improvement observed in last {self.patience} epochs. '
-                        f'Best results observed at epoch {self.best_epoch}, best model saved as best.pt.\n'
-                        f'To update EarlyStopping(patience={self.patience}) pass a new patience value, '
-                        f'i.e. `python train.py --patience 300` or use `--patience 0` to disable EarlyStopping.')
         return stop
