@@ -385,7 +385,7 @@ if __name__ == '__main__':
     parser.add_argument('--rect', action='store_true', help='rectangular training')
     parser.add_argument('--resume', nargs='?', const='get_last', default=False,
                         help='resume from given path/last.pt, or most recent run if blank')
-    parser.add_argument('--nosave', action='store_false', help='only save final checkpoint')
+    parser.add_argument('--nosave', action='store_true', help='only save final checkpoint')
     parser.add_argument('--notest', action='store_false', help='only test final epoch')
     parser.add_argument('--noautoanchor', action='store_true', help='disable autoanchor check')
     parser.add_argument('--evolve', action='store_false', help='evolve hyperparameters')
