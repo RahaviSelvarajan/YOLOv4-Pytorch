@@ -300,7 +300,7 @@ def train(hyp, opt, device, tb_writer=None):
             # mAP
             if ema is not None:
                 ema.update_attr(model, include=['yaml', 'nc', 'hyp', 'gr', 'names', 'stride'])
-            final_epoch = epoch + 1 == epochs or stopper.possible_stop
+            final_epoch = (epoch + 1 == epochs) or stopper.possible_stop
             if not opt.notest or final_epoch:  # Calculate mAP
                 results, maps, times = test.test(opt.data,
                                                  batch_size=batch_size,
@@ -399,6 +399,7 @@ if __name__ == '__main__':
     parser.add_argument('--adam', action='store_true', help='use torch.optim.Adam() optimizer')
     parser.add_argument('--sync-bn', action='store_true', help='use SyncBatchNorm, only available in DDP mode')
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter, do not modify')
+    parser.add_argument('--patience', type=int, default=10, help='EarlyStopping patience (epochs without improvement)')
     parser.add_argument('--logdir', type=str, default='runs/', help='logging directory')
     opt = parser.parse_args()
 
