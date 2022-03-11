@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from copy import copy
 from pathlib import Path
 from sys import platform
+import logging
 
 import cv2
 import matplotlib
@@ -23,6 +24,8 @@ from scipy.signal import butter, filtfilt
 from tqdm import tqdm
 
 from utils.torch_utils import init_seeds, is_parallel
+
+VERBOSE = str(os.getenv('YOLOv5_VERBOSE', True)).lower() == 'true'
 
 # Set printoptions
 torch.set_printoptions(linewidth=320, precision=5, profile='long')
@@ -1429,3 +1432,26 @@ def plot_results(start=0, stop=0, bucket='', id=(), labels=(),
     fig.tight_layout()
     ax[1].legend()
     fig.savefig(Path(save_dir) / 'results.png', dpi=200)
+
+
+def is_kaggle():
+    # Is environment a Kaggle Notebook?
+    try:
+        assert os.environ.get('PWD') == '/kaggle/working'
+        assert os.environ.get('KAGGLE_URL_BASE') == 'https://www.kaggle.com'
+        return True
+    except AssertionError:
+        return False
+
+
+def set_logging(name=None, verbose=VERBOSE):
+    # Sets level and returns logger
+    if is_kaggle():
+        for h in logging.root.handlers:
+            logging.root.removeHandler(h)  # remove all handlers associated with the root logger object
+    rank = int(os.getenv('RANK', -1))  # rank in world for Multi-GPU trainings
+    logging.basicConfig(format="%(message)s", level=logging.INFO if (verbose and rank in (-1, 0)) else logging.WARNING)
+    return logging.getLogger(name)
+
+
+LOGGER = set_logging('yolov5')

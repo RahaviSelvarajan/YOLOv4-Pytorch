@@ -16,7 +16,6 @@ from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-# from pytorchtools import EarlyStopping
 
 import test  # import test.py to get mAP after each epoch
 from models.yolo import Model
@@ -26,7 +25,7 @@ from utils.general import (
     labels_to_image_weights, compute_loss, plot_images, fitness, strip_optimizer, plot_results,
     get_latest_run, check_git_status, check_file, increment_dir, print_mutation, plot_evolution)
 from utils.google_utils import attempt_download
-from utils.torch_utils import init_seeds, ModelEMA, select_device, intersect_dicts
+from utils.torch_utils import init_seeds, ModelEMA, select_device, intersect_dicts, EarlyStopping
 
 
 def train(hyp, opt, device, tb_writer=None):
@@ -189,6 +188,7 @@ def train(hyp, opt, device, tb_writer=None):
     results = (0, 0, 0, 0, 0, 0, 0)  # 'P', 'R', 'mAP', 'F1', 'val GIoU', 'val Objectness', 'val Classification'
     scheduler.last_epoch = start_epoch - 1  # do not move
     scaler = amp.GradScaler(enabled=cuda)
+    stopper = EarlyStopping(patience=opt.patience)
     if rank in [0, -1]:
         print('Image sizes %g train, %g test' % (imgsz, imgsz_test))
         print('Using %g dataloader workers' % dataloader.num_workers)
@@ -300,7 +300,7 @@ def train(hyp, opt, device, tb_writer=None):
             # mAP
             if ema is not None:
                 ema.update_attr(model, include=['yaml', 'nc', 'hyp', 'gr', 'names', 'stride'])
-            final_epoch = epoch + 1 == epochs
+            final_epoch = epoch + 1 == epochs or stopper.possible_stop
             if not opt.notest or final_epoch:  # Calculate mAP
                 results, maps, times = test.test(opt.data,
                                                  batch_size=batch_size,
@@ -347,6 +347,10 @@ def train(hyp, opt, device, tb_writer=None):
                 if best_fitness == fi:
                     torch.save(ckpt, best)
                 del ckpt
+
+            # Stop Single-GPU
+            if rank == -1 and stopper(epoch=epoch, fitness=fi):
+                break
         # end epoch ----------------------------------------------------------------------------------------------------
     # end training
 
@@ -508,7 +512,6 @@ if __name__ == '__main__':
 
             # Train mutation
             results = train(hyp.copy(), opt, device)
-
             # Write mutation results
             print_mutation(hyp.copy(), results, yaml_file, opt.bucket)
 
